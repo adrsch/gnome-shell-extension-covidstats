@@ -21,8 +21,8 @@ let CovidApiUrl = 'https://api.covid19api.com/summary';
 const CovidIndicator = new Lang.Class({
   Name: 'CovidIndicator', Extends: PanelMenu.Button,
   _init: function() {
-    this.parent(null, IndicatorNameText);
-
+    this.parent(null, IndicatorNameText, false);
+    this._refreshIntervalSeconds = 30;
     this._icon = new St.Icon({icon_name: 'system-run-symbolic',
                              style_class: 'system-status-icon'
     });
@@ -30,7 +30,7 @@ const CovidIndicator = new Lang.Class({
     
     this._info = new St.Label({
       y_align: Clutter.ActorAlign.CENTER,
-      text: _('test')
+      text: _('...')
     });
 
     let indicator = new St.BoxLayout();
@@ -47,45 +47,37 @@ const CovidIndicator = new Lang.Class({
     let children = null;
     children = Main.panel._leftBox.get_children();
     Main.panel._leftBox.insert_child_at_index(this.actor, children.length);
-    global.log(`asd
-
-    a
-    a
-    a
-    a
-    a
-    a`);
+    
     this._refreshIntervalSeconds = 30;
     this._url = CovidApiUrl;
     this._soupSession = null;
     this._canConnect = null;
-    this._refreshStatistics();
+    this._refresh();
     this._buildMenu();
   },
-
   _buildMenu:function() {
+    //TODO: Display global stats at top of menu
+    let globalStats = new PopupMenu.PopupMenuSection();
+    let globalCases = new PopupMenu.PopupMenuItem(_("Global Cases")); 
+    this.menu.addMenuItem(globalStats);
     this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-    this._menuItem = new PopupMenu.PopupBaseMenuItem({
-      reactive: false,
-      can_focus: false
-    });
-    this.menu.addMenuItem(this._menuItem);
-    let head = new PopupMenu.PopupMenuSection();
-    let item = new PopupMenu.PopupMenuItem(_("Test"));
-    item.connect('activate', Lang.bind(this, this._testMenu));
-    head.addMenuItem(item);
-    this.menu.addMenuItem(head);
-    this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+    let settings = new PopupMenu.PopupMenuSection();
+    let setLocation = new PopupMenu.PopupMenuItem(_("Set Location")); 
+    setLocation.connect('activate', Lang.bind(this, this._setLocation));
+    settings.addMenuItem(setLocation);
+    this.menu.addMenuItem(settings);
   },
 
-  _toggleMenu: function(){
+  _setLocation: function(){
+    // TODO: Open window to allow users to set a location to monitor
     global.log(this.menu.toggle);
     global.log(this.menu.open);
     this.menu.open();
     this.menu.toggle();
   },	
   
-  _testMenu: function () {
+  _setLocation: function () {
+    //TODO: create window for changing settings
     global.log('Test');
     return 0;
   },
@@ -109,7 +101,6 @@ const CovidIndicator = new Lang.Class({
       } catch (e) {
         this._canConnect = false;
       }
-      global.log(this._canConnect);
     }));
     },
   _processJson: function(json) {
@@ -117,13 +108,13 @@ const CovidIndicator = new Lang.Class({
     this._info.text = JSON.stringify(json['Global']['TotalConfirmed']);
   },
 
-  _refreshStatistics: function () {
+  _refresh: function () {
     if (this._timeout) {
       Mainloop.source_remove(this._timeout);
       this._timeout = null;
     }
     this.updateStatistics();
-    this._timeout = Mainloop.timeout_add_seconds(this._refreshIntervalSeconds, Lang.bind(this, this._refreshStatistics));
+    this._timeout = Mainloop.timeout_add_seconds(this._refreshIntervalSeconds, Lang.bind(this, this._refresh));
   }
 
 
