@@ -23,19 +23,37 @@ const CovidIndicator = new Lang.Class({
   _init: function() {
     this.parent(null, IndicatorNameText, false);
     this._refreshIntervalSeconds = 30;
-    this._icon = new St.Icon({icon_name: 'system-run-symbolic',
+    this._iconCases = new St.Icon({icon_name: 'system-run-symbolic',
                              style_class: 'system-status-icon'
     });
-    this._icon.gicon = Gio.icon_new_for_string( Me.path+'/test.svg');
-    
-    this._info = new St.Label({
+    this._iconRecovered = new St.Icon({icon_name: 'system-run-symbolic',
+                             style_class: 'system-status-icon'
+    });
+    this._iconDead = new St.Icon({icon_name: 'system-run-symbolic',
+                             style_class: 'system-status-icon'
+    });
+    this._iconCases.gicon = Gio.icon_new_for_string( Me.path+'/emotion-unhappy-fill.svg');
+    this._iconRecovered.gicon = Gio.icon_new_for_string( Me.path+'/emotion-fill.svg');
+    this._iconDead.gicon = Gio.icon_new_for_string( Me.path+'/skull-fill.svg');
+    this._infoCases = new St.Label({
       y_align: Clutter.ActorAlign.CENTER,
       text: _('...')
     });
-
+    this._infoRecovered = new St.Label({
+      y_align: Clutter.ActorAlign.CENTER,
+      text: _('...')
+    });   
+    this._infoDead = new St.Label({
+      y_align: Clutter.ActorAlign.CENTER,
+      text: _('...')
+    });
     let indicator = new St.BoxLayout();
-    indicator.add_actor(this._icon);
-    indicator.add_actor(this._info);
+    indicator.add_actor(this._iconCases);
+    indicator.add_actor(this._infoCases);
+    indicator.add_actor(this._iconRecovered);
+    indicator.add_actor(this._infoRecovered);
+    indicator.add_actor(this._iconDead);
+    indicator.add_actor(this._infoDead);
     this.actor.add_actor(indicator);
     this.actor.add_style_class_name('panel-status-button');
 
@@ -46,46 +64,15 @@ const CovidIndicator = new Lang.Class({
 
     let children = null;
     children = Main.panel._leftBox.get_children();
-    Main.panel._leftBox.insert_child_at_index(this.actor, children.length);
+    Main.panel._leftBox.insert_child_at_index(this.actor, 0);
     
-    this._refreshIntervalSeconds = 30;
+    this._refreshIntervalSeconds = 180;
     this._url = CovidApiUrl;
     this._soupSession = null;
     this._canConnect = null;
     this._refresh();
-    this._buildMenu();
   },
-  _buildMenu:function() {
-    //TODO: Display global stats at top of menu
-    let globalStats = new PopupMenu.PopupMenuSection();
-    let globalCases = new PopupMenu.PopupMenuItem(_("Global Cases")); 
-    this.menu.addMenuItem(globalStats);
-    this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-    let settings = new PopupMenu.PopupMenuSection();
-    let setLocation = new PopupMenu.PopupMenuItem(_("Set Location")); 
-    setLocation.connect('activate', Lang.bind(this, this._setLocation));
-    settings.addMenuItem(setLocation);
-    this.menu.addMenuItem(settings);
-  },
-
-  _setLocation: function(){
-    // TODO: Open window to allow users to set a location to monitor
-    global.log(this.menu.toggle);
-    global.log(this.menu.open);
-    this.menu.open();
-    this.menu.toggle();
-  },	
   
-  _setLocation: function () {
-    //TODO: create window for changing settings
-    global.log('Test');
-    return 0;
-  },
-
-  getIcon: function() {
-    return '~/test.svg'
-  }, 
-
   updateStatistics: function() {
     if (!this._soupSession) {
       this._soupSession = new Soup.Session();
@@ -104,8 +91,12 @@ const CovidIndicator = new Lang.Class({
     }));
     },
   _processJson: function(json) {
-    global.log(JSON.stringify(json['Global']));
-    this._info.text = JSON.stringify(json['Global']['TotalConfirmed']);
+    let cases = JSON.stringify(json['Global']['TotalConfirmed']);
+    this._infoCases.text = cases.substring(0, cases.length - 6) + '.' + cases.substring(cases.length - 6, cases.length - 4) + 'm';
+    let recovered = JSON.stringify(json['Global']['TotalRecovered']);
+    this._infoRecovered.text = recovered.substring(0, recovered.length - 6) + '.' + recovered.substring(recovered.length - 6, recovered.length - 4) + 'm';
+    let dead = JSON.stringify(json['Global']['TotalDeaths']);
+    this._infoDead.text = dead.substring(0, dead.length - 3) + 'k';
   },
 
   _refresh: function () {
@@ -124,7 +115,7 @@ function init() {
 }
 
 function enable() {
-  let covidIndicator = new CovidIndicator();
+  var covidIndicator = new CovidIndicator();
   Main.panel.addToStatusArea(IndicatorNameText, covidIndicator);
 }
 
